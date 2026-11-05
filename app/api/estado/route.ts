@@ -1,5 +1,9 @@
-import { backend } from "@/lib/store";
+import { backend, backendKind, ping } from "@/lib/store";
 export const dynamic = "force-dynamic";
 export async function GET() {
-  return Response.json({ backend, vercel: !!process.env.VERCEL });
+  const p = await ping();
+  return Response.json(
+    { backend, kind: backendKind, ok: p.ok, error: p.error, vercel: !!process.env.VERCEL },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

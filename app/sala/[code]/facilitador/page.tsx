@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
+import { BackendBanner } from "@/components/BackendBanner";
 import { Ranking } from "@/components/Ranking";
 import { CHALLENGES } from "@/lib/challenges";
 import { getAdminKey, useRoomState } from "@/lib/client";
@@ -33,7 +34,7 @@ export default function Page({ params }: { params: Promise<{ code: string }> }) 
       <header className="topbar">
         <Link href="/" className="back">← Inicio</Link>
         <h1>Panel del facilitador</h1>
-        <Link href="/teoria" target="_blank">📽️ Diapositivas</Link>
+        <span />
       </header>
       <div className="joinBox">
         <div>
@@ -46,6 +47,7 @@ export default function Page({ params }: { params: Promise<{ code: string }> }) 
         </div>
         <button className="secondary" onClick={() => navigator.clipboard?.writeText(joinUrl)}>Copiar enlace</button>
       </div>
+      <BackendBanner />
       {!adminKey && (
         <div className="banner warn">Este navegador no creó la sala, así que solo puedes ver el ranking (no abrir/cerrar retos).</div>
       )}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { CHALLENGES } from "@/lib/challenges";
-import { getPracticeMode, getSavedTeam, postScore, savePracticeMode, type Mode, type Team } from "@/lib/client";
+import { addPending, flushPending, getPending, getPracticeMode, getSavedTeam, postScore, savePracticeMode, type Mode, type ScoreError, type Team } from "@/lib/client";
 import { Ranking } from "./Ranking";
 
 export interface ChallengeProps {
@@ -55,6 +55,21 @@ export function ChallengeShell({
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [ready, setReady] = useState(false);
 
+  const [pending, setPending] = useState(0);
+  // Reintenta en segundo plano los puntajes que quedaron pendientes.
+  useEffect(() => {
+    if (!code || !team) return;
+    const tick = async () => {
+      if (!getPending(code).length) return setPending(0);
+      const sent = await flushPending(code, team);
+      setPending(getPending(code).length);
+      if (sent) toast(`Se enviaron ${sent} puntaje(s) pendiente(s) ✅`);
+    };
+    tick();
+    const id = setInterval(tick, 8000);
+    return () => clearInterval(id);
+  }, [code, team]);
+
   useEffect(() => {
     if (code) {
       const t = getSavedTeam(code);
@@ -77,10 +92,15 @@ export function ChallengeShell({
       return;
     }
     try {
-      const { best } = await postScore(code, team.id, key, s);
+      const { best } = await postScore(code, team, key, s);
       toast(best > s ? `Puntaje: ${s}. Tu mejor marca sigue siendo ${best}.` : s > 0 ? `¡Puntaje enviado: ${s}! 🎉` : "Puntaje: 0. ¡Prueba otra estrategia!");
     } catch (e) {
-      toast(`No se pudo enviar el puntaje: ${(e as Error).message}`);
+      const err = e as ScoreError;
+      if (err.retry) {
+        addPending(code, { key, score: s });
+        setPending(getPending(code).length);
+        toast(`No se pudo enviar (${err.message}). Quedó guardado y se reenviará solo.`);
+      } else toast(`No se pudo enviar el puntaje: ${err.message}`);
     }
   };
 
@@ -114,6 +134,9 @@ export function ChallengeShell({
         <div className="banner warn">
           No estás unido a la sala {code} desde este navegador. <Link href={`/?sala=${code}`}>Únete aquí</Link> para que tus puntajes cuenten.
         </div>
+      )}
+      {pending > 0 && (
+        <div className="banner warn">⏳ {pending} puntaje(s) pendiente(s) de enviar. Se reintentan solos cada pocos segundos.</div>
       )}
       <div className={code ? "withSide" : ""}>
         <main>{ready && children({ mode, submit, code })}</main>
