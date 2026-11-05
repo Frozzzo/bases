@@ -1,18 +1,31 @@
-import { getState, backend, CODE_RE } from "@/lib/store";
-import { CHALLENGE_IDS } from "@/lib/challenges";
+import { sync, CODE_RE, type SyncBody } from "@/lib/store";
 export const dynamic = "force-dynamic";
+
+const headers = { "Cache-Control": "no-store" };
+
+function codeOf(raw: string) {
+  const code = raw.trim().toUpperCase();
+  return CODE_RE.test(code) ? code : null;
+}
+
+/** Estado actual de la sala (solo lectura). */
 export async function GET(_req: Request, { params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  let state;
+  const code = codeOf((await params).code);
+  if (!code) return Response.json({ error: "Código de sala inválido" }, { status: 400 });
+  return Response.json(sync(code, {}), { headers });
+}
+
+/** Sincroniza: el navegador manda lo que sabe (su equipo y puntajes, o el panel del facilitador) y recibe el estado fusionado. */
+export async function POST(req: Request, { params }: { params: Promise<{ code: string }> }) {
+  const code = codeOf((await params).code);
+  if (!code) return Response.json({ error: "Código de sala inválido" }, { status: 400 });
+  const text = await req.text();
+  if (text.length > 200_000) return Response.json({ error: "Demasiados datos" }, { status: 413 });
+  let body: SyncBody = {};
   try {
-    state = await getState(code.toUpperCase());
-  } catch (e) {
-    console.error("[sala]", e);
-    return Response.json({ error: "El almacenamiento no respondió" }, { status: 503 });
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    return Response.json({ error: "JSON inválido" }, { status: 400 });
   }
-  // En modo memoria (sin Redis) la sala puede estar en otra instancia: devolvemos una sala vacía en vez de un error.
-  if (!state && backend === "memoria" && CODE_RE.test(code.toUpperCase()))
-    state = { room: { code: code.toUpperCase(), createdAt: Date.now(), open: CHALLENGE_IDS }, teams: [], scores: {} };
-  if (!state) return Response.json({ error: "Sala no encontrada" }, { status: 404 });
-  return Response.json(state, { headers: { "Cache-Control": "no-store" } });
+  return Response.json(sync(code, body), { headers });
 }

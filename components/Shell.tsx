@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { CHALLENGES } from "@/lib/challenges";
-import { addPending, flushPending, getPending, getPracticeMode, getSavedTeam, postScore, savePracticeMode, type Mode, type ScoreError, type Team } from "@/lib/client";
+import { getPracticeMode, getSavedTeam, saveLocalBest, savePracticeMode, syncNow, useRoomState, type Mode, type Team } from "@/lib/client";
 import { Ranking } from "./Ranking";
 
 export interface ChallengeProps {
@@ -55,21 +55,6 @@ export function ChallengeShell({
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [ready, setReady] = useState(false);
 
-  const [pending, setPending] = useState(0);
-  // Reintenta en segundo plano los puntajes que quedaron pendientes.
-  useEffect(() => {
-    if (!code || !team) return;
-    const tick = async () => {
-      if (!getPending(code).length) return setPending(0);
-      const sent = await flushPending(code, team);
-      setPending(getPending(code).length);
-      if (sent) toast(`Se enviaron ${sent} puntaje(s) pendiente(s) ✅`);
-    };
-    tick();
-    const id = setInterval(tick, 8000);
-    return () => clearInterval(id);
-  }, [code, team]);
-
   useEffect(() => {
     if (code) {
       const t = getSavedTeam(code);
@@ -91,17 +76,10 @@ export function ChallengeShell({
       toast(`Puntaje: ${s} (modo práctica, no se guarda)`);
       return;
     }
-    try {
-      const { best } = await postScore(code, team, key, s);
-      toast(best > s ? `Puntaje: ${s}. Tu mejor marca sigue siendo ${best}.` : s > 0 ? `¡Puntaje enviado: ${s}! 🎉` : "Puntaje: 0. ¡Prueba otra estrategia!");
-    } catch (e) {
-      const err = e as ScoreError;
-      if (err.retry) {
-        addPending(code, { key, score: s });
-        setPending(getPending(code).length);
-        toast(`No se pudo enviar (${err.message}). Quedó guardado y se reenviará solo.`);
-      } else toast(`No se pudo enviar el puntaje: ${err.message}`);
-    }
+    // El puntaje se guarda primero en este navegador y se sincroniza con la sala (se reintenta solo).
+    const best = saveLocalBest(code, key, s);
+    toast(best > s ? `Puntaje: ${s}. Tu mejor marca sigue siendo ${best}.` : s > 0 ? `¡Puntaje guardado: ${s}! 🎉` : "Puntaje: 0. ¡Prueba otra estrategia!");
+    await syncNow(code);
   };
 
   const back = code ? `/sala/${code}` : "/practica";
@@ -135,9 +113,7 @@ export function ChallengeShell({
           No estás unido a la sala {code} desde este navegador. <Link href={`/?sala=${code}`}>Únete aquí</Link> para que tus puntajes cuenten.
         </div>
       )}
-      {pending > 0 && (
-        <div className="banner warn">⏳ {pending} puntaje(s) pendiente(s) de enviar. Se reintentan solos cada pocos segundos.</div>
-      )}
+      {code && team && <SyncStatus code={code} teamId={team.id} />}
       <div className={code ? "withSide" : ""}>
         <main>{ready && children({ mode, submit, code })}</main>
         {code && (
@@ -155,4 +131,16 @@ export function ChallengeShell({
       </div>
     </div>
   );
+}
+
+function SyncStatus({ code, teamId }: { code: string; teamId: string }) {
+  const { state, error } = useRoomState(code);
+  if (state?.removed.includes(teamId))
+    return (
+      <div className="banner warn">
+        El facilitador quitó a este equipo del ranking. <Link href={`/?sala=${code}`}>Únete de nuevo</Link> si fue un error.
+      </div>
+    );
+  if (error) return <div className="banner warn">⏳ {error}</div>;
+  return null;
 }

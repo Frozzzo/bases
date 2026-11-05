@@ -5,8 +5,8 @@
 
 ## Antes de la clase (15 min, el día anterior)
 
-- [ ] Desplegar en Vercel con Upstash Redis (ver README) **o** correr `npm run build && npm start` en tu laptop con todos en la misma red.
-- [ ] Abrir la portada y comprobar que abajo dice "Almacenamiento: Redis … ✅" (en Vercel). Si aparece un aviso rojo, falta conectar Redis o volver a desplegar.
+- [ ] Desplegar en Vercel (no requiere configuración) **o** correr `npm run build && npm start` en tu laptop con todos en la misma red.
+- [ ] Crear la sala desde el computador que vas a proyectar y **dejar el panel del facilitador abierto toda la clase**: guarda la copia de respaldo del ranking.
 - [ ] Crear una sala de prueba, unirse desde el celular y enviar un puntaje. Ver que aparece en el ranking.
 - [ ] Abrir las diapositivas (.pptx) en el proyector y revisar las notas del orador.
 - [ ] Tener dos pestañas: diapositivas y panel del facilitador.
@@ -60,7 +60,9 @@ Equipos de 3–4 personas, **mezclando** devs y no devs. Un equipo con alguien n
 3. Bajo sobrecarga, rechazar pronto (back pressure) es mejor que aceptar todo y fallar tarde.
 
 ## Problemas comunes
-- **"Sala no encontrada" o "no se pudo enviar el puntaje"** en Vercel: falta Redis o no se volvió a desplegar tras agregarlo (aviso rojo en la portada y en el panel). Los puntajes que fallan quedan guardados en el navegador del equipo y se reenvían solos cuando el servidor responde.
+- **"No encontramos al facilitador"** al unirse: revisa el código y que tu panel esté abierto. El equipo puede pulsar "Entrar igual".
+- **"Sin conexión con el servidor"**: los puntajes quedan guardados en el navegador del equipo y se reenvían solos al reconectar.
+- **Un puntaje tarda en aparecer**: el ranking se actualiza cada 2–3 s; puede tardar unos segundos más.
 - **Un equipo cerró el navegador**: al volver a la sala desde el mismo navegador sigue siendo el mismo equipo. Desde otro dispositivo tendrán que unirse de nuevo (se crea otro equipo; puedes quitar el viejo con ✕ en el panel).
 - **El panel no deja abrir/cerrar retos**: solo funciona en el navegador que creó la sala.
 - **Optimiza tarda**: la versión original es lenta a propósito (hasta ~3 s en laptops lentas). Hay un límite de 20 s por medición.

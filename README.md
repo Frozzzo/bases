@@ -40,45 +40,40 @@ npm run dev        # http://localhost:3000
 npm run build && npm start
 ```
 
-Sin configurar nada, las salas viven **en la memoria del servidor**. Es suficiente para jugar en local o en la red de la sala de clases (los equipos entran a `http://<tu-ip>:3000`). Si reinicias el servidor, las salas se pierden.
+No necesita base de datos, servicios externos ni variables de entorno.
 
 ## Desplegar en Vercel
 
-1. Importa el repositorio en [vercel.com/new](https://vercel.com/new). Framework: Next.js (se detecta solo). No hay que cambiar comandos.
-2. **Conecta Redis para el estado compartido** (necesario en Vercel: las funciones serverless no comparten memoria entre instancias):
-   - En el proyecto de Vercel: **Storage → Create Database → Upstash for Redis** (Marketplace) y conéctala al proyecto. Vercel crea las variables `KV_REST_API_URL` y `KV_REST_API_TOKEN` automáticamente.
-   - O bien crea una base gratis en [upstash.com](https://upstash.com) y agrega a mano `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` en **Settings → Environment Variables**.
-3. Vuelve a desplegar (Deployments → Redeploy) para que tome las variables.
-4. Abre la app: abajo en la portada dice **"Almacenamiento: Redis (compartido)"**. Si dice "memoria del servidor" en Vercel, aparece un aviso amarillo: revisa las variables.
+Importa el repositorio en [vercel.com/new](https://vercel.com/new) y despliega. Framework: Next.js (se detecta solo). No hay que configurar nada más.
 
-### Variables de entorno
+### Cómo funciona el estado compartido (sin Redis)
 
-| Variable | Para qué |
-|---|---|
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Credenciales REST de Upstash/Vercel KV (las crea la integración de Vercel) |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Alternativa equivalente si creas la base en upstash.com |
-| `REDIS_URL` | Cualquier Redis por TCP (p. ej. la integración "Redis" del Marketplace de Vercel). Se usa si no hay variables REST |
+En Vercel las funciones serverless **no comparten memoria**: cada petición puede caer en una instancia distinta, y una instancia nueva empieza vacía. Por eso la "verdad" no vive en el servidor sino en los navegadores:
 
-Ver [`.env.example`](.env.example). Sin variables → modo memoria. Con Upstash se usa su API REST con `fetch`; con `REDIS_URL` se usa el cliente `redis`.
+- Cada equipo guarda en su navegador (`localStorage`) su equipo y sus mejores puntajes, y los reenvía en cada sincronización.
+- El panel del facilitador guarda la configuración de la sala (retos abiertos, equipos quitados) y una **copia de respaldo de todo el ranking**, y también la reenvía.
+- Todos sincronizan con `POST /api/salas/<código>` cada 2–2,5 s. El servidor fusiona lo recibido (unión de equipos, máximo por puntaje; un equipo quitado no vuelve) y devuelve el estado. Si una instancia es nueva o se reinició, en uno o dos ciclos vuelve a tener el ranking completo.
+- Solo el navegador que creó la sala puede abrir/cerrar retos o quitar equipos (tiene una clave que nunca se muestra).
 
-### Si los equipos ven "no se pudo enviar el puntaje" o "sala no encontrada"
+**Lo que hay que saber (el precio de no tener base de datos):**
 
-Casi siempre es un despliegue en Vercel **sin Redis**: en modo memoria cada instancia serverless tiene su propia copia de las salas, así que crear la sala, unirse y enviar puntajes pueden caer en instancias distintas. La portada y el panel del facilitador muestran un aviso rojo en ese caso. Solución: conectar Upstash (arriba) y **volver a desplegar** (las variables nuevas solo se aplican en un despliegue nuevo). `GET /api/estado` debe responder `"backend":"redis","ok":true`.
+- **Deja abierto el panel del facilitador** durante la clase: es la copia de respaldo. Si se cierra, los equipos con la pestaña abierta siguen reenviando sus puntajes, pero los de equipos que ya cerraron su pestaña pueden desaparecer del ranking en una instancia nueva hasta que vuelvan a entrar.
+- El ranking puede tardar **unos segundos** en mostrar un puntaje nuevo.
+- Si el facilitador borra los datos del navegador o cambia de computador, pierde el control de la sala (crea una nueva).
 
-Además, el envío de puntajes es tolerante a fallos: reintenta con backoff, guarda en el navegador los que no se pudieron enviar y los reenvía solo, y si la sala o el equipo no existen en el almacenamiento (reinicio, expiración, otra instancia) los vuelve a registrar en vez de fallar.
+Es más que suficiente para una clase de ~20 equipos. Con 20 equipos son ~8 peticiones/s, cada una de pocos KB.
 
-### Cómo funciona el estado compartido
+### Si los equipos ven "Sin conexión con el servidor"
 
-- Cada sala son 3 claves en Redis (`sala:<código>:meta`, `:equipos`, `:puntajes`) que expiran a las 48 h.
-- El mejor puntaje se guarda de forma atómica con un pequeño script Lua (no se pierden puntajes con envíos simultáneos).
-- Los clientes consultan `GET /api/salas/<código>` cada 2–3 s (**polling**), que funciona en cualquier hosting serverless sin WebSockets. Con 15 equipos son ~6 peticiones/s, muy por debajo del plan gratuito de Upstash para una clase.
+Sus puntajes están guardados en su navegador y se reenvían solos al reconectar; no hay que hacer nada. Al unirse, si el panel del facilitador no está abierto, la portada avisa ("No encontramos al facilitador…") y permite entrar igual.
 
 ## Estructura
 
 ```
 app/                  Páginas (Next.js App Router) y API (/api/salas…)
 components/challenges Un componente por reto
-lib/store.ts          Estado de salas (Redis REST o memoria)
+lib/store.ts          Fusión del estado de salas en memoria del servidor
+lib/client.ts         Estado local en el navegador y sincronización
 lib/sim/restaurante.ts Simulación determinista de colas
 lib/optimiza.ts       Ejercicios de "Optimiza y mide" y arreglos del modo fácil
 lib/runner.ts         Ejecuta código en un Web Worker con timeout

@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BackendBanner } from "@/components/BackendBanner";
-import { saveAdminKey, saveTeam, type Mode } from "@/lib/client";
+import { createHostedRoom, getSavedTeam, newTeam, saveTeam, type Mode } from "@/lib/client";
 
 function Home() {
   const router = useRouter();
@@ -21,42 +20,44 @@ function Home() {
     if (s) setCode(s.toUpperCase());
   }, [params]);
 
-  async function join(e: React.FormEvent) {
-    e.preventDefault();
+  const [unsure, setUnsure] = useState<string | null>(null);
+
+  async function hostOnline(c: string) {
+    // El panel del facilitador sincroniza cada ~2 s; con varias instancias puede tardar en aparecer.
+    for (let i = 0; i < 3; i++) {
+      try {
+        const st = await (await fetch(`/api/salas/${c}`, { cache: "no-store" })).json();
+        if (st?.room?.hostSeenAt && Date.now() - st.room.hostSeenAt < 60_000) return true;
+      } catch {}
+      await new Promise((r) => setTimeout(r, 700));
+    }
+    return false;
+  }
+
+  async function join(e?: React.FormEvent, force = false) {
+    e?.preventDefault();
     setError(null);
+    const c = code.replace(/\s+/g, "").toUpperCase();
+    if (!/^[A-Z0-9]{4,6}$/.test(c)) return setError("El código de sala tiene 4 letras o números.");
+    if (!name.trim()) return setError("Falta el nombre del equipo.");
     setBusy(true);
     try {
-      const c = code.replace(/\s+/g, "").toUpperCase();
-      const res = await fetch(`/api/salas/${c}/unirse`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, mode }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No se pudo unir");
-      saveTeam(c, data.team);
+      if (!force && !(await hostOnline(c))) {
+        setUnsure(c);
+        return;
+      }
+      // Si este navegador ya estaba en la sala, conserva el equipo (y sus puntajes).
+      const prev = getSavedTeam(c);
+      saveTeam(c, prev ? { ...prev, name: name.trim().slice(0, 40), mode } : newTeam(name, mode));
       router.push(`/sala/${c}`);
-    } catch (err) {
-      setError((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
-  async function create() {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/salas", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "No se pudo crear");
-      saveAdminKey(data.room.code, data.adminKey);
-      router.push(`/sala/${data.room.code}/facilitador`);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+  function create() {
+    const c = createHostedRoom();
+    router.push(`/sala/${c}/facilitador`);
   }
 
   return (
@@ -112,7 +113,14 @@ function Home() {
         </div>
       </div>
       {error && <div className="banner error">{error}</div>}
-      <BackendBanner showOk />
+      {unsure && (
+        <div className="banner warn">
+          No encontramos al facilitador de la sala <strong>{unsure}</strong>. Revisa el código (y que el panel del facilitador esté abierto).{" "}
+          <button className="link" onClick={() => join(undefined, true)}>
+            Entrar igual
+          </button>
+        </div>
+      )}
     </div>
   );
 }
