@@ -3,7 +3,7 @@
 Juego web por equipos para una clase de ~90 minutos sobre **profiling, latencias, colas y back pressure**.
 Pensado para un público mixto: cada reto tiene un modo **🌱 Fácil** (sin programar) y un modo **🧑‍💻 Dev** (con código).
 
-- **Diapositivas de teoría** (15 min): `/teoria`
+- **Diapositivas de teoría** (15 min): se entregan aparte como archivo .pptx (no están en el repo)
 - **Guía del facilitador** con tiempos: [`docs/guia-facilitador.md`](docs/guia-facilitador.md)
 
 ## Retos
@@ -57,8 +57,15 @@ Sin configurar nada, las salas viven **en la memoria del servidor**. Es suficien
 |---|---|
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Credenciales REST de Upstash/Vercel KV (las crea la integración de Vercel) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Alternativa equivalente si creas la base en upstash.com |
+| `REDIS_URL` | Cualquier Redis por TCP (p. ej. la integración "Redis" del Marketplace de Vercel). Se usa si no hay variables REST |
 
-Ver [`.env.example`](.env.example). Sin variables → modo memoria. No se necesitan otras dependencias: se habla con Upstash por su API REST con `fetch`.
+Ver [`.env.example`](.env.example). Sin variables → modo memoria. Con Upstash se usa su API REST con `fetch`; con `REDIS_URL` se usa el cliente `redis`.
+
+### Si los equipos ven "no se pudo enviar el puntaje" o "sala no encontrada"
+
+Casi siempre es un despliegue en Vercel **sin Redis**: en modo memoria cada instancia serverless tiene su propia copia de las salas, así que crear la sala, unirse y enviar puntajes pueden caer en instancias distintas. La portada y el panel del facilitador muestran un aviso rojo en ese caso. Solución: conectar Upstash (arriba) y **volver a desplegar** (las variables nuevas solo se aplican en un despliegue nuevo). `GET /api/estado` debe responder `"backend":"redis","ok":true`.
+
+Además, el envío de puntajes es tolerante a fallos: reintenta con backoff, guarda en el navegador los que no se pudieron enviar y los reenvía solo, y si la sala o el equipo no existen en el almacenamiento (reinicio, expiración, otra instancia) los vuelve a registrar en vez de fallar.
 
 ### Cómo funciona el estado compartido
 
@@ -70,7 +77,6 @@ Ver [`.env.example`](.env.example). Sin variables → modo memoria. No se necesi
 
 ```
 app/                  Páginas (Next.js App Router) y API (/api/salas…)
-app/teoria/           Diapositivas de teoría
 components/challenges Un componente por reto
 lib/store.ts          Estado de salas (Redis REST o memoria)
 lib/sim/restaurante.ts Simulación determinista de colas

@@ -6,9 +6,9 @@
 ## Antes de la clase (15 min, el día anterior)
 
 - [ ] Desplegar en Vercel con Upstash Redis (ver README) **o** correr `npm run build && npm start` en tu laptop con todos en la misma red.
-- [ ] Abrir la portada y comprobar "Almacenamiento: Redis (compartido)" (en Vercel).
+- [ ] Abrir la portada y comprobar que abajo dice "Almacenamiento: Redis … ✅" (en Vercel). Si aparece un aviso rojo, falta conectar Redis o volver a desplegar.
 - [ ] Crear una sala de prueba, unirse desde el celular y enviar un puntaje. Ver que aparece en el ranking.
-- [ ] Probar `/teoria` en el proyector (F = pantalla completa, N = notas del orador, ←/→ para avanzar).
+- [ ] Abrir las diapositivas (.pptx) en el proyector y revisar las notas del orador.
 - [ ] Tener dos pestañas: diapositivas y panel del facilitador.
 
 ## Equipos
@@ -20,7 +20,7 @@ Equipos de 3–4 personas, **mezclando** devs y no devs. Un equipo con alguien n
 | Min | Bloque | Qué hacer |
 |---|---|---|
 | 0–5 | Bienvenida | Formar equipos. Crear la sala y proyectar el código. Que todos se unan mientras hablas. En el panel, deja abierto solo 🍔 Restaurante. |
-| 5–20 | Teoría (`/teoria`, 15 slides) | ~1 min por slide. Detente en "A escala humana" y en "Colas". No reveles la mejor configuración del restaurante. |
+| 5–20 | Teoría (diapositivas .pptx, 15 slides) | ~1 min por slide. Detente en "A escala humana" y en "Colas". No reveles la mejor configuración del restaurante. |
 | 20–35 | 🍔 Restaurante caótico | 12 min de juego + 3 min de debrief. |
 | 35–45 | ⚡ Carrera de latencias | 6 min + 4 min de debrief (solo cuenta el primer intento). |
 | 45–70 | ⏱️ Optimiza y mide | 20 min + 5 min de debrief. Es el reto central para devs. |
@@ -60,7 +60,7 @@ Equipos de 3–4 personas, **mezclando** devs y no devs. Un equipo con alguien n
 3. Bajo sobrecarga, rechazar pronto (back pressure) es mejor que aceptar todo y fallar tarde.
 
 ## Problemas comunes
-- **"Sala no encontrada"** en Vercel: falta Redis (ver aviso amarillo en la portada) o el código está mal escrito.
+- **"Sala no encontrada" o "no se pudo enviar el puntaje"** en Vercel: falta Redis o no se volvió a desplegar tras agregarlo (aviso rojo en la portada y en el panel). Los puntajes que fallan quedan guardados en el navegador del equipo y se reenvían solos cuando el servidor responde.
 - **Un equipo cerró el navegador**: al volver a la sala desde el mismo navegador sigue siendo el mismo equipo. Desde otro dispositivo tendrán que unirse de nuevo (se crea otro equipo; puedes quitar el viejo con ✕ en el panel).
 - **El panel no deja abrir/cerrar retos**: solo funciona en el navegador que creó la sala.
 - **Optimiza tarda**: la versión original es lenta a propósito (hasta ~3 s en laptops lentas). Hay un límite de 20 s por medición.

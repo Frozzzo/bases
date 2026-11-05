@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { BackendBanner } from "@/components/BackendBanner";
 import { saveAdminKey, saveTeam, type Mode } from "@/lib/client";
 
 function Home() {
@@ -14,15 +15,10 @@ function Home() {
   const [mode, setMode] = useState<Mode>("facil");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [backend, setBackend] = useState<{ backend: string; vercel: boolean } | null>(null);
 
   useEffect(() => {
     const s = params.get("sala");
     if (s) setCode(s.toUpperCase());
-    fetch("/api/estado")
-      .then((r) => r.json())
-      .then(setBackend)
-      .catch(() => {});
   }, [params]);
 
   async function join(e: React.FormEvent) {
@@ -30,7 +26,7 @@ function Home() {
     setError(null);
     setBusy(true);
     try {
-      const c = code.trim().toUpperCase();
+      const c = code.replace(/\s+/g, "").toUpperCase();
       const res = await fetch(`/api/salas/${c}/unirse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,23 +107,12 @@ function Home() {
           </button>
           <hr />
           <p>
-            <Link href="/teoria">📽️ Diapositivas de teoría</Link>
-          </p>
-          <p>
             <Link href="/practica">🎯 Practicar sin sala</Link>
           </p>
         </div>
       </div>
       {error && <div className="banner error">{error}</div>}
-      {backend && backend.backend === "memoria" && backend.vercel && (
-        <div className="banner warn">
-          Este despliegue usa memoria del servidor: en Vercel las salas pueden perderse o no compartirse entre instancias.
-          Conecta Upstash Redis (ver README) para la clase.
-        </div>
-      )}
-      {backend && (
-        <p className="muted small center">Almacenamiento: {backend.backend === "redis" ? "Redis (compartido)" : "memoria del servidor"}</p>
-      )}
+      <BackendBanner showOk />
     </div>
   );
 }
