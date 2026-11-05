@@ -109,6 +109,7 @@ label.radio input, label.check input { margin-top: 4px; accent-color: var(--acce
 .banner { padding: 10px 14px; border-radius: 10px; margin: 12px 0; border: 1px solid var(--border); }
 .banner.warn { border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .banner.error { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.banner.info { border-color: var(--accent, #4a90d9); background: color-mix(in srgb, var(--accent, #4a90d9) 10%, transparent); }
 
 .hero { text-align: center; padding: 24px 0 12px; }
 .hero h1 { font-size: 2.4rem; }
