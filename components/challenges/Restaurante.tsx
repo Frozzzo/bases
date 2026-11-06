@@ -133,6 +133,34 @@ export default function Restaurante({ mode, submit }: ChallengeProps) {
             organizas la fila?
           </p>
         )}
+        <details className="small" open>
+          <summary>
+            <strong>{dev ? "Datos del sistema" : "Datos del turno"}</strong>
+          </summary>
+          <ul>
+            <li>
+              {dev ? "Duración de la simulación" : "El turno dura"}: {SIM.duration} s ({dev ? "no llegan requests en los últimos 20 s" : "en los últimos 20 s ya no llegan clientes"}).
+            </li>
+            <li>
+              {dev ? "Llegadas (Poisson)" : "Llegan en promedio"}: {SIM.baseRate.toLocaleString("es")} {dev ? "req/s" : "clientes por segundo"} en ritmo normal y{" "}
+              {SIM.rushRate.toLocaleString("es")} {dev ? "req/s" : "por segundo"} en la hora pico (de t = {SIM.rushStart} s a t = {SIM.rushEnd} s).
+            </li>
+            <li>
+              {dev ? "Tiempo de servicio" : "Cada plato tarda"}: ~2,5 s en promedio (mínimo 1,2 s; {dev ? "distribución exponencial desplazada" : "algunos tardan más"}). Por
+              eso cada {dev ? "worker" : "cocinero"} atiende ~0,4 {dev ? "req/s" : "clientes por segundo"}.
+            </li>
+            <li>
+              {dev ? "Timeout del cliente" : "Paciencia"}: {SIM.patience} s contados desde que {dev ? "llega el request" : "el cliente llega"}, incluyendo el tiempo de cocina.
+            </li>
+            <li>
+              Costo: {SIM.cookCost} puntos por cada {dev ? "worker" : "cocinero"}, cocine o no.
+            </li>
+            <li>
+              Puntos: feliz +{SIM.points.happy}, se fue enojado {SIM.points.abandoned}, rechazado en la puerta {SIM.points.rejected}, sacado de la fila{" "}
+              {SIM.points.dropped}, plato para nadie {SIM.points.wasted}.
+            </li>
+          </ul>
+        </details>
       </div>
 
       <div className="restoLayout">

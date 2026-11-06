@@ -117,7 +117,7 @@ function normalize(out) { return [...out].sort(); }`,
     title: "El problema N+1",
     emoji: "🗄️",
     facil:
-      "Para mostrar 300 pedidos con el nombre de su cliente, el programa va a la bodega (base de datos) a buscar a cada cliente, uno por uno, aunque muchos se repiten. Cada viaje toma tiempo. ¿Cómo hacemos menos viajes?",
+      "Para mostrar 300 pedidos con el nombre de su cliente, el programa va a la bodega (base de datos) a buscar a cada cliente, uno por uno, aunque muchos se repiten: son solo 60 clientes distintos. Cada viaje tarda ~2 ms y la bodega atiende a un máximo de 5 personas a la vez. ¿Cómo hacemos menos viajes?",
     dev: "Enriquece 300 pedidos con el nombre del usuario. `db.getUser(id)` tarda ~2 ms por consulta y el pool solo admite 5 consultas simultáneas. También existe `db.getUsersByIds(ids)` (una sola consulta). Devuelve [{ orderId, total, userName }].",
     target: 120,
     setup: `${RNG}
